@@ -9,8 +9,8 @@ abstract class RateAdapter
 
     /** @var Shipment */
     protected $shipment;
-    protected $data;
-    protected $response;
+    public $data;
+    public $response;
     protected $rates;
 
     /** @var  @var RateRequest\Adapter */

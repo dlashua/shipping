@@ -24,10 +24,7 @@ class Rate extends RateAdapter
 
     private $shipping_codes = [
         'domestic' => [
-            '00' => 'First-Class Mail Parcel',
-            '01' => 'First-Class Mail Large Envelope',
-            '02' => 'First-Class Mail Letter',
-            '03' => 'First-Class Mail Postcards',
+            '0' => 'First-Class Mail Parcel',
             '1' => 'Priority Mail',
             '2' => 'Express Mail Hold for Pickup',
             '3' => 'Express Mail',
@@ -132,6 +129,7 @@ class Rate extends RateAdapter
                     '<Length>' . $p->getLength() . '</Length>' .
                     '<Height>' . $p->getHeight() . '</Height>' .
                     '<Machinable>' . 'False' . '</Machinable>' .
+                    '<ShipDate>' . date('Y-m-d') . '</ShipDate>' . 
                 '</Package>';
         }
 
@@ -161,6 +159,7 @@ class Rate extends RateAdapter
 
     protected function process()
     {
+
         try {
             $dom = new DOMDocument('1.0', 'UTF-8');
             $dom->loadXml($this->response);
@@ -180,6 +179,10 @@ class Rate extends RateAdapter
         foreach ($postage_list as $postage) {
             $code = @$postage->getAttribute('CLASSID');
             $cost = @$postage->getElementsByTagName('Rate')->item(0)->nodeValue;
+            $deliveryEstimate = @$postage->getElementsByTagName('CommitmentDate')->item(0)->nodeValue;
+            $transitTime = @$postage->getElementsByTagName('CommitmentName')->item(0)->nodeValue;
+            //$name = @$postage->getElementsByTagName('MailService')->item(0)->nodeValue;
+            
 
             $name = Arr::get($this->shipping_codes['domestic'], $code);
 
@@ -197,8 +200,20 @@ class Rate extends RateAdapter
             $quote
                 ->setCarrier('usps')
                 ->setCode($code)
-                ->setName($name)
+                ->setName(html_entity_decode($name))
                 ->setCost((int) $cost);
+
+
+            if(!empty($deliveryEstimate)) {
+    
+                $deliveryEstimateDT = new \DateTime($deliveryEstimate);
+                $transitTime = $deliveryEstimateDT->diff(new \DateTime(date('Y-m-d')));
+
+                $quote->setTransitTime($transitTime->d);
+                $quote->setDeliveryEstimate($deliveryEstimateDT);
+
+            }
+
 
             $rates[$quote->getCode()] = $quote;
         }
